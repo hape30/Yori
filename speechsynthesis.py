@@ -1,14 +1,15 @@
 import speech_recognition as sr
-import pyttsx3
+from gtts import gTTS
 import os
 import subprocess
+import pygame
 
 def recognize_speech():
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         print("Скажите что-нибудь...")
         try:
-            audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
+            audio = recognizer.listen(source, timeout=1, phrase_time_limit=1)
         except Exception as e:
             print(f"Ошибка при записи аудио: {e}")
             return "Не удалось записать аудио"
@@ -23,34 +24,28 @@ def recognize_speech():
             return "Ошибка сервиса; {0}".format(e)
 
 def speak(text):
-    engine = pyttsx3.init()
+    tts = gTTS(text=text, lang='ru')
+    tts.save("response.mp3")
     
-    # Получение и вывод доступных голосов
-    voices = engine.getProperty('voices')
-    for i, voice in enumerate(voices):
-        print(f"Voice {i}:")
-        print(f" - ID: {voice.id}")
-        print(f" - Name: {voice.name}")
-        print(f" - Languages: {voice.languages}")
-        print(f" - Gender: {voice.gender}")
-        print(f" - Age: {voice.age}")
+    # Инициализация pygame mixer
+    pygame.mixer.init()
+    pygame.mixer.music.load("response.mp3")
+    pygame.mixer.music.play()
     
-    # Установка голоса (можно выбрать другой голос, изменив индекс)
-    engine.setProperty('voice', voices[1].id)  # Пример: выбираем второй доступный голос
-
-    # Установка скорости речи (слова в минуту)
-    engine.setProperty('rate', 150)  # Пример: 150 слов в минуту
-
-    # Установка громкости (от 0.0 до 1.0)
-    engine.setProperty('volume', 0.9)  # Пример: 90% громкости
+    # Ждем окончания воспроизведения
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
     
-    engine.say(text)
-    engine.runAndWait()
+    # Останавливаем и закрываем pygame mixer
+    pygame.mixer.music.stop()
+    pygame.mixer.quit()
+    
+    os.remove("response.mp3")
 
 def open_program(command):
     if "браузер" in command:
         speak("Открываю браузер")
-        subprocess.run(["start", "chrome"], shell=True)  # Пример для Google Chrome
+        subprocess.run(["start", "chrome" or "yandex" or "firefox"], shell=True)  # Пример для Google Chrome
     elif "блокнот" in command:
         speak("Открываю блокнот")
         subprocess.run(["notepad.exe"], shell=True)
