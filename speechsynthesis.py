@@ -3,6 +3,8 @@ from gtts import gTTS
 import os
 import subprocess
 import pygame
+import psutil
+import shutil
 
 def recognize_speech():
     recognizer = sr.Recognizer()
@@ -42,21 +44,42 @@ def speak(text):
     
     os.remove("response.mp3")
 
+def find_executable(program_name):
+    # Ищем программу в системных путях
+    executable = shutil.which(program_name)
+    if executable:
+        return executable
+
+    # Ищем программу среди запущенных процессов
+    for proc in psutil.process_iter(['pid', 'name', 'exe']):
+        if program_name.lower() in proc.info['name'].lower():
+            return proc.info['exe']
+    
+    # Пытаемся найти программу в популярных каталогах
+    common_paths = [
+        r"C:\Program Files",
+        r"C:\Program Files (x86)",
+        os.path.expanduser("~\\AppData\\Local\\Programs"),
+        os.path.expanduser("~\\AppData\\Local")
+    ]
+    
+    for path in common_paths:
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if program_name.lower() in file.lower():
+                    return os.path.join(root, file)
+    
+    return None
+
 def open_program(command):
-    if "браузер" in command:
-        speak("Открываю браузер")
-        subprocess.run(["start", "chrome" or "yandex" or "firefox"], shell=True)  # Пример для Google Chrome
-    elif "блокнот" in command:
-        speak("Открываю блокнот")
-        subprocess.run(["notepad.exe"], shell=True)
-    elif "проводник" in command:
-        speak("Открываю проводник")
-        subprocess.run(["explorer.exe"], shell=True)
-    elif "калькулятор" in command:
-        speak("Открываю калькулятор")
-        subprocess.run(["calc.exe"], shell=True)
+    app_name = command.split("открыть ")[-1].strip()
+    executable_path = find_executable(app_name)
+    
+    if executable_path:
+        speak(f"Открываю {app_name}")
+        subprocess.run([executable_path], shell=True)
     else:
-        speak("Команда не распознана")
+        speak(f"Не удалось найти программу {app_name}")
 
 if __name__ == "__main__":
     while True:
